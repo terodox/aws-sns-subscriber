@@ -1,0 +1,19 @@
+{
+  "name": "aws-sns-subscriber",
+  "version": "0.0.1",
+  "author":  {
+    "name": "Andrew Desmarais",
+    "email": "terodox@gmail.com"
+  },
+  "repository": "https://github.com/terodox/aws-sns-subscriber",
+  "dependencies": {
+    "aws-sdk": "^2.7.21",
+    "node.extend": "1.1.6"
+  },
+  "devDependencies": {
+    "nodeunit": "0.10.2"
+  },
+  "scripts": {
+    "test": "nodeunit test/index.js"
+  }
+}
