@@ -14,7 +14,8 @@
     "nodeunit": "0.10.2"
   },
   "scripts": {
-    "test": "nodeunit test/index.js"
+    "test": "nodeunit test/index.js",
+    "integrationTest": "nodeunit test/integrationTests.js"
   },
   "engines": {
     "node": "4.2.1",

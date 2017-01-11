@@ -8,8 +8,12 @@ let defaultOptions = {
     sqsArn: null
 };
 
-exports.subscribeSqsToSns = function(options, callback) {
-    return internal_subscribeSqsToSns(AWS, options, callback);
+let getQueueUrl = (sqsClient, options) => {
+    let queueArnParts = options.sqsArn.split(":");
+    let queueName = queueArnParts[queueArnParts.length - 1];
+    return sqsClient.getQueueUrl({
+        QueueName: queueName
+    }).promise();
 };
 
 let subscribe = (aws, options) => {
@@ -24,15 +28,7 @@ let subscribe = (aws, options) => {
     }).promise();
 };
 
-let getQueueUrl = (sqsClient, options) => {
-    let queueArnParts = options.sqsArn.split(":");
-    let queueName = queueArnParts[queueArnParts.length - 1];
-    return sqsClient.getQueueUrl({
-        QueueName: queueName
-    }).promise();
-};
-
-exports.__subscribeSqsToSns = function (aws, options, callback) {
+let internal_subscribeSqsToSns = function (aws, options, callback) {
     options = extend(defaultOptions, options);
 
     let sqsClient = new aws.SQS({
@@ -44,12 +40,12 @@ exports.__subscribeSqsToSns = function (aws, options, callback) {
         .then(() => {
             return getQueueUrl(sqsClient, options);
         }).then(() => {
-            if(callback) callback(null, {});
-            deferred.resolve({});
-        }).catch((error) => {
-            if(callback) callback(error);
-            deferred.reject(error);
-        });
+        if(callback) callback(null, {});
+        deferred.resolve({});
+    }).catch((error) => {
+        if(callback) callback(error);
+        deferred.reject(error);
+    });
 
     return {
         promise: function () {
@@ -57,4 +53,10 @@ exports.__subscribeSqsToSns = function (aws, options, callback) {
         }
     };
 };
+
+exports.subscribeSqsToSns = function(options, callback) {
+    return internal_subscribeSqsToSns(AWS, options, callback);
+};
+
+exports.__subscribeSqsToSns = internal_subscribeSqsToSns;
 
