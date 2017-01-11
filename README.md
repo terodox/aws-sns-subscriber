@@ -1,0 +1,1 @@
+[![Build Status](https://travis-ci.org/terodox/aws-sns-subscriber.svg?branch=master)](https://travis-ci.org/terodox/aws-sns-subscriber)
