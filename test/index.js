@@ -5,12 +5,21 @@ console.info("Starting index.js tests");
 let snsSubscribe = function () {
     return {
         promise: function() {
-            return Promise.resolve({})
+            return Promise.resolve({});
         }
     };
 };
 
-let awsMock;
+let snsSubscribeErrorMessage = "Sns subscribe failed";
+let snsSubscribeError = function () {
+    return {
+        promise: function() {
+            return Promise.reject(snsSubscribeErrorMessage);
+        }
+    };
+};
+
+let awsMock, awsSnsErrorMock;
 
 exports.sqsSnsSubscriberTests = {
     "setUp": function(callback) {
@@ -22,6 +31,15 @@ exports.sqsSnsSubscriberTests = {
                 };
             }
         };
+
+        awsSnsErrorMock = {
+            SQS: function () {},
+            SNS: function () {
+                return {
+                    subscribe: snsSubscribeError
+                };
+            }
+        };
         callback();
     },
     "function is imported correctly": function (test) {
@@ -29,17 +47,25 @@ exports.sqsSnsSubscriberTests = {
         test.done();
     },
     "function calls callback when completed": function (test) {
-        let callback = function() {
+        let callback = function(error) {
+            test.ok(!error);
             test.done();
         };
         subscribeSqsToSns(awsMock, {}, callback);
+    },
+    "function calls callback when error occurs": function (test) {
+        let callback = function(error) {
+            test.ok(error);
+            test.done();
+        };
+        subscribeSqsToSns(awsSnsErrorMock, {}, callback);
     },
     "function doesn't throw if callback is undefined": function (test) {
         subscribeSqsToSns(awsMock);
         test.done();
     },
     "function returns resolved promise when completed": function (test) {
-        subscribeSqsToSns(awsMock).then(() => {
+        subscribeSqsToSns(awsMock).promise().then(() => {
             test.done();
         });
     },
@@ -74,14 +100,14 @@ exports.sqsSnsSubscriberTests = {
             region: "us-east-1"
         });
     },
-    "if SNS.subscribe fails, promise is rejected": function(test) {
-        console.info("starting test");
+    "if SNS.subscribe fails, promise is rejected and error message is bubbled": function(test) {
+        let errorMessage = "Boom";
         awsMock.SNS = function() {
             return {
                 subscribe: function () {
                     return {
                         promise: function () {
-                            return Promise.reject("Boom");
+                            return Promise.reject(errorMessage);
                         }
                     };
                 }
@@ -90,7 +116,8 @@ exports.sqsSnsSubscriberTests = {
 
         subscribeSqsToSns(awsMock, {
             region: "us-east-1"
-        }).catch(function () {
+        }).promise().catch(function (error) {
+            test.equal(error, errorMessage);
             test.done();
         });
     }

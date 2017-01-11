@@ -23,12 +23,23 @@ exports.__subscribeSqsToSns = function (aws, options, callback) {
         region: options.region
     });
 
-    return snsClient.subscribe({
+    let deferred = Promise.defer();
+    snsClient.subscribe({
         TopicArn: options.snsTopicArn,
         Protocol: "sqs",
         Endpoint: options.sqsArn
     }).promise().then(() => {
-        if(callback) callback();
+        if(callback) callback(null, {});
+        deferred.resolve({});
+    }).catch((error) => {
+        if(callback) callback(error);
+        deferred.reject(error);
     });
+
+    return {
+        promise: function () {
+            return deferred.promise;
+        }
+    };
 };
 
