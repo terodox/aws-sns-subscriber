@@ -15,5 +15,8 @@
   },
   "scripts": {
     "test": "nodeunit test/index.js"
+  },
+  "engines": {
+    "node": "4.2.1"
   }
 }
