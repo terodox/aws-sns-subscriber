@@ -5,7 +5,9 @@ console.info("Starting index.js tests");
 let snsSubscribe = function () {
     return {
         promise: function() {
-            return Promise.resolve({});
+            return Promise.resolve({
+
+            });
         }
     };
 };
@@ -19,12 +21,37 @@ let snsSubscribeError = function () {
     };
 };
 
+let sqsGetQueueUrl = function () {
+    return {
+        promise: () => {
+            return Promise.resolve({
+                QueueUrl: "http://someMagicalQueueUrl.things"
+            });
+        }
+    };
+};
+
+let basicOptions = {
+    sqsArn: "arn:aws:sqs:us-east-1:XXXXXXXXXXX:SomeMagicalQueueName",
+    snsTopicArn: "arn:aws:sns:us-east-1:XXXXXXXXXXX:SomeMysticalTopic"
+};
+
+let basicOptionsPlusRegion = {
+    sqsArn: "arn:aws:sqs:us-east-1:XXXXXXXXXXX:SomeMagicalQueueName",
+    snsTopicArn: "arn:aws:sns:us-east-1:XXXXXXXXXXX:SomeMysticalTopic",
+    region: "us-east-1"
+};
+
 let awsMock, awsSnsErrorMock;
 
 exports.sqsSnsSubscriberTests = {
     "setUp": function(callback) {
         awsMock = {
-            SQS: function () {},
+            SQS: function () {
+                return {
+                    getQueueUrl: sqsGetQueueUrl
+                };
+            },
             SNS: function () {
                 return {
                     subscribe: snsSubscribe
@@ -51,14 +78,14 @@ exports.sqsSnsSubscriberTests = {
             test.ok(!error);
             test.done();
         };
-        subscribeSqsToSns(awsMock, {}, callback);
+        subscribeSqsToSns(awsMock, basicOptions, callback);
     },
     "function calls callback when error occurs": function (test) {
         let callback = function(error) {
             test.ok(error);
             test.done();
         };
-        subscribeSqsToSns(awsSnsErrorMock, {}, callback);
+        subscribeSqsToSns(awsSnsErrorMock, basicOptions, callback);
     },
     "function doesn't throw if callback is undefined": function (test) {
         subscribeSqsToSns(awsMock);
@@ -82,9 +109,7 @@ exports.sqsSnsSubscriberTests = {
             test.done();
         };
 
-        subscribeSqsToSns(awsMock, {
-            region: "us-east-1"
-        });
+        subscribeSqsToSns(awsMock, basicOptionsPlusRegion);
     },
     "specified region is used when creating SNS client": function(test) {
         let region = "us-east-1";
@@ -96,9 +121,7 @@ exports.sqsSnsSubscriberTests = {
             };
         };
 
-        subscribeSqsToSns(awsMock, {
-            region: "us-east-1"
-        });
+        subscribeSqsToSns(awsMock, basicOptions);
     },
     "if SNS.subscribe fails, promise is rejected and error message is bubbled": function(test) {
         let errorMessage = "Boom";
@@ -114,11 +137,30 @@ exports.sqsSnsSubscriberTests = {
             };
         };
 
-        subscribeSqsToSns(awsMock, {
-            region: "us-east-1"
-        }).promise().catch(function (error) {
+        subscribeSqsToSns(awsMock, basicOptions).promise().catch(function (error) {
             test.equal(error, errorMessage);
             test.done();
         });
+    },
+    // TODO Validate subscribe called with correct properties
+    "if SQS.getQueueUrl fails, promise is rejected and error message is bubbled": function (test) {
+        let errorMessage = "Bang";
+        awsMock.SQS = function () {
+            return {
+                getQueueUrl: () => {
+                    return {
+                        promise: () => {
+                            return Promise.reject(errorMessage);
+                        }
+                    };
+                }
+            }
+        };
+
+        subscribeSqsToSns(awsMock, basicOptions).promise()
+            .catch((error) => {
+                test.equal(error, errorMessage);
+                test.done();
+            });
     }
 };

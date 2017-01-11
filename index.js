@@ -24,21 +24,32 @@ let subscribe = (aws, options) => {
     }).promise();
 };
 
+let getQueueUrl = (sqsClient, options) => {
+    let queueArnParts = options.sqsArn.split(":");
+    let queueName = queueArnParts[queueArnParts.length - 1];
+    return sqsClient.getQueueUrl({
+        QueueName: queueName
+    }).promise();
+};
+
 exports.__subscribeSqsToSns = function (aws, options, callback) {
     options = extend(defaultOptions, options);
 
-    new aws.SQS({
+    let sqsClient = new aws.SQS({
         region: options.region
     });
 
     let deferred = Promise.defer();
-    subscribe(aws, options).then(() => {
-        if(callback) callback(null, {});
-        deferred.resolve({});
-    }).catch((error) => {
-        if(callback) callback(error);
-        deferred.reject(error);
-    });
+    subscribe(aws, options)
+        .then(() => {
+            return getQueueUrl(sqsClient, options);
+        }).then(() => {
+            if(callback) callback(null, {});
+            deferred.resolve({});
+        }).catch((error) => {
+            if(callback) callback(error);
+            deferred.reject(error);
+        });
 
     return {
         promise: function () {
