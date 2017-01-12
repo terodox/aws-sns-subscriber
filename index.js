@@ -8,6 +8,15 @@ let defaultOptions = {
     sqsArn: null
 };
 
+let getQueuePolicy = (sqsClient, queueUrl) => {
+    return sqsClient.getQueueAttributes({
+        QueueUrl: queueUrl,
+        AttributeNames: [
+            "Policy"
+        ]
+    }).promise();
+};
+
 let getQueueUrl = (sqsClient, options) => {
     let queueArnParts = options.sqsArn.split(":");
     let queueName = queueArnParts[queueArnParts.length - 1];
@@ -39,13 +48,15 @@ let internal_subscribeSqsToSns = function (aws, options, callback) {
     subscribe(aws, options)
         .then(() => {
             return getQueueUrl(sqsClient, options);
+        }).then((getQueueUrlResponse) => {
+            return getQueuePolicy(sqsClient, getQueueUrlResponse.QueueUrl);
         }).then(() => {
-        if(callback) callback(null, {});
-        deferred.resolve({});
-    }).catch((error) => {
-        if(callback) callback(error);
-        deferred.reject(error);
-    });
+            if(callback) callback(null, {});
+            deferred.resolve({});
+        }).catch((error) => {
+            if(callback) callback(error);
+            deferred.reject(error);
+        });
 
     return {
         promise: function () {

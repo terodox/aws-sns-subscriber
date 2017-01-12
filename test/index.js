@@ -21,11 +21,25 @@ let snsSubscribeError = function () {
     };
 };
 
+let queueUrl = "http://someMagicalQueueUrl.things";
 let sqsGetQueueUrl = function () {
     return {
         promise: () => {
             return Promise.resolve({
-                QueueUrl: "http://someMagicalQueueUrl.things"
+                QueueUrl: queueUrl
+            });
+        }
+    };
+};
+
+let queuePolicy = {};
+let sqsGetQueueAttributes = function() {
+    return {
+        promise: () => {
+            return Promise.resolve({
+                Attributes: {
+                    Policy: queuePolicy
+                }
             });
         }
     };
@@ -49,7 +63,8 @@ exports.sqsSnsSubscriberTests = {
         awsMock = {
             SQS: function () {
                 return {
-                    getQueueUrl: sqsGetQueueUrl
+                    getQueueUrl: sqsGetQueueUrl,
+                    getQueueAttributes: sqsGetQueueAttributes
                 };
             },
             SNS: function () {
@@ -142,7 +157,26 @@ exports.sqsSnsSubscriberTests = {
             test.done();
         });
     },
-    // TODO Validate subscribe called with correct properties
+    "SNS.subscribe is called with the correct options": function(test) {
+        let errorMessage = "Boom";
+        awsMock.SNS = function() {
+            return {
+                subscribe: function (options) {
+                    test.equal(options.TopicArn, basicOptions.snsTopicArn);
+                    test.equal(options.Endpoint, basicOptions.sqsArn);
+                    test.equal(options.Protocol, "sqs");
+                    test.done();
+                    return {
+                        promise: function () {
+                            return Promise.reject(errorMessage);
+                        }
+                    };
+                }
+            };
+        };
+
+        subscribeSqsToSns(awsMock, basicOptions);
+    },
     "if SQS.getQueueUrl fails, promise is rejected and error message is bubbled": function (test) {
         let errorMessage = "Bang";
         awsMock.SQS = function () {
@@ -162,5 +196,64 @@ exports.sqsSnsSubscriberTests = {
                 test.equal(error, errorMessage);
                 test.done();
             });
+    },
+    "SQS.getQueueUrl is called with correct options": function (test) {
+        let errorMessage = "Bang";
+        awsMock.SQS = function () {
+            return {
+                getQueueUrl: (options) => {
+                    test.ok(basicOptions.sqsArn.indexOf(options.QueueName) >= 0);
+                    test.done();
+                    return {
+                        promise: () => {
+                            return Promise.reject(errorMessage);
+                        }
+                    };
+                }
+            }
+        };
+
+        subscribeSqsToSns(awsMock, basicOptions);
+    },
+    "if SQS.getQueueAttributes fails, promise is rejected and error message is bubbled": function (test) {
+        let errorMessage = "Bang";
+        awsMock.SQS = function () {
+            return {
+                getQueueUrl: sqsGetQueueUrl,
+                getQueueAttributes: () => {
+                    return {
+                        promise: () => {
+                            return Promise.reject(errorMessage);
+                        }
+                    };
+                }
+            }
+        };
+
+        subscribeSqsToSns(awsMock, basicOptions).promise()
+            .catch((error) => {
+                test.equal(error, errorMessage);
+                test.done();
+            });
+    },
+    "SQS.getQueueAttributes is called with correct options": function (test) {
+        let errorMessage = "Bang";
+        awsMock.SQS = function () {
+            return {
+                getQueueUrl: sqsGetQueueUrl,
+                getQueueAttributes: (options) => {
+                    test.equal(options.QueueUrl, queueUrl);
+                    test.equal(options.AttributeNames[0], "Policy");
+                    test.done();
+                    return {
+                        promise: () => {
+                            return Promise.reject(errorMessage);
+                        }
+                    };
+                }
+            }
+        };
+
+        subscribeSqsToSns(awsMock, basicOptions);
     }
 };
