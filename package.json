@@ -7,8 +7,10 @@
   },
   "repository": "https://github.com/terodox/aws-sns-subscriber",
   "dependencies": {
-    "aws-sdk": "^2.7.21",
-    "node.extend": "1.1.6"
+    "aws-sdk": "~2.7.21",
+    "node.extend": "~1.1.6",
+    "md5": "^2.2.1",
+    "deep-equal": "~1.0.1"
   },
   "devDependencies": {
     "nodeunit": "0.10.2"

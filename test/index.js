@@ -251,7 +251,7 @@ exports.sqsSnsSubscriberTests = {
                         }
                     };
                 }
-            }
+            };
         };
 
         subscribeSqsToSns(awsMock, basicOptions);
