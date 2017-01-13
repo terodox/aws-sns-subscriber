@@ -32,15 +32,18 @@ let sqsGetQueueUrl = function () {
     };
 };
 
-let queuePolicy = {};
 let sqsGetQueueAttributes = function() {
     return {
         promise: () => {
-            return Promise.resolve({
-                Attributes: {
-                    Policy: queuePolicy
-                }
-            });
+            return Promise.resolve({});
+        }
+    };
+};
+
+let sqsSetQueueAttributes = () => {
+    return {
+        promise: () => {
+            return Promise.resolve();
         }
     };
 };
@@ -64,7 +67,8 @@ exports.sqsSnsSubscriberTests = {
             SQS: function () {
                 return {
                     getQueueUrl: sqsGetQueueUrl,
-                    getQueueAttributes: sqsGetQueueAttributes
+                    getQueueAttributes: sqsGetQueueAttributes,
+                    setQueueAttributes: sqsSetQueueAttributes
                 };
             },
             SNS: function () {
