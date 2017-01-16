@@ -1,5 +1,6 @@
 "use strict";
 let subscribeSqsToSns = require("../index.js").__subscribeSqsToSns;
+let md5 = require("md5");
 console.info("Starting index.js tests");
 
 let snsSubscribe = function () {
@@ -259,5 +260,113 @@ exports.sqsSnsSubscriberTests = {
         };
 
         subscribeSqsToSns(awsMock, basicOptions);
+    },
+    "if policy does not exist, then it is created": function (test) {
+        awsMock.SQS = function () {
+            return {
+                getQueueUrl: sqsGetQueueUrl,
+                getQueueAttributes: sqsGetQueueAttributes,
+                setQueueAttributes: () => {
+                    test.ok(true);
+                    test.done();
+                }
+            };
+        };
+
+        subscribeSqsToSns(awsMock, basicOptions);
+    },
+    "if Attributes returned without Policy, then policy is created": function (test) {
+        awsMock.SQS = function () {
+            return {
+                getQueueUrl: sqsGetQueueUrl,
+                getQueueAttributes: function () {
+                    return {
+                        promise: function () {
+                            return Promise.resolve({
+                                Attributes: {}
+                            });
+                        }
+                    };
+                },
+                setQueueAttributes: () => {
+                    test.ok(true);
+                    test.done();
+                }
+            };
+        };
+
+        subscribeSqsToSns(awsMock, basicOptions);
+    },
+    "if Attributes returned with policies that do not match our policy, then policy is created": function (test) {
+        awsMock.SQS = function () {
+            return {
+                getQueueUrl: sqsGetQueueUrl,
+                getQueueAttributes: function () {
+                    return {
+                        promise: function () {
+                            return Promise.resolve({
+                                Attributes: {
+                                    Policy: JSON.stringify({
+                                        Statement: [
+                                            {
+                                                Sid: md5("No soup for you!")
+                                            }
+                                        ]
+                                    })
+                                }
+                            });
+                        }
+                    };
+                },
+                setQueueAttributes: () => {
+                    test.ok(true);
+                    test.done();
+                }
+            };
+        };
+
+        subscribeSqsToSns(awsMock, basicOptions);
+    },
+    "if policy exists, then exit": function (test) {
+        let testCompleted = false;
+        awsMock.SQS = function () {
+            return {
+                getQueueUrl: sqsGetQueueUrl,
+                getQueueAttributes: function () {
+                    return {
+                        promise: function () {
+                            return Promise.resolve({
+                                Attributes: {
+                                    Policy: JSON.stringify({
+                                        Statement: [
+                                            {
+                                                Sid: md5(basicOptions.snsTopicArn + basicOptions.sqsArn)
+                                            }
+                                        ]
+                                    })
+                                }
+                            });
+                        }
+                    };
+                },
+                setQueueAttributes: () => {
+                    if(!testCompleted) {
+                        testCompleted = true;
+                        test.ok(false);
+                        test.done();
+                    }
+                }
+            };
+        };
+
+        subscribeSqsToSns(awsMock, basicOptions).promise().then(() => {
+            setTimeout(() => {
+                if(!testCompleted) {
+                    testCompleted = true;
+                    test.ok(true);
+                    test.done();
+                }
+            }, 1);
+        });
     }
 };
